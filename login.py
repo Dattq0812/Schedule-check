@@ -29,12 +29,9 @@ HEADERS = {
 }
 
 # 2. Thông tin đăng nhập (Thay bằng của bạn để test)
- #file chứa tài khoản và mật khẩu
-# json_data = {
-#     'username': 'Tài khoản',
-#     'password': 'Mật khẩu',
-#     'type': 0,
-# }
+#file .env chứa tài khoản và mật khẩu
+# username=your_username
+# password=your_password
 load_dotenv()
 username = os.getenv('username')
 password = os.getenv('password')
