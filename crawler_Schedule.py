@@ -1,11 +1,10 @@
-from sqlite3 import Date
+
 import requests
-from bs4 import BeautifulSoup
-import json
 import urllib3
 import login
 from datetime import datetime
 import utils
+
 # Tắt cảnh báo SSL (nếu có)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 1. Cấu hình thông tin mục tiêu
@@ -32,15 +31,12 @@ schedule_headers = {
     'Authorization': f'Bearer {token}',
     'Content-Type': 'application/json',
     }
-def get_schedule():
-    print(f"Đang gửi yêu cầu lấy lịch học đến: {SCHEDULE_URL}")
+def get_schedule_date():
     if not token:
         print("Không thể lấy lịch học vì đăng nhập thất bại.")
         return None
     print(f"Token nhận được: {token[:20]}...")
-
     #Lấy lịch học
-   
     response_schedule = session.get(SCHEDULE_URL, headers=schedule_headers, verify=False)
     #print(f"Status Code lấy lịch học: {response_schedule.status_code}")
 
@@ -48,7 +44,6 @@ def get_schedule():
         print("Lấy lịch học thất bại!")
         return None
     
-    print("Lấy lịch học thành công. Đang xử lý dữ liệu...")
    # print(f"Response Text Lịch học: {response_schedule.text}")
 #
     schedule_data = response_schedule.json()
@@ -61,10 +56,14 @@ def get_schedule():
         'namhoc': current_time[0],
         'hocky': current_time[1],
     }
-
+    return params
+def get_schedule():
+    params = get_schedule_date()
+    if params is None:
+        print("Không thể lấy lịch học vì không có dữ liệu năm học và học kỳ.")
+        return None
     #Lấy ngày hiện tại để xác định tuần học
     date_now = datetime.now()
-
     #Xác định tuần học hiện tại
     response_week = session.get('https://portal_api.vhu.edu.vn/api/student/WeekSchedule', params=params, headers=schedule_headers, verify=False)
     #print(f"Status Code lấy lịch theo tuần: {response_week.status_code}")
@@ -96,8 +95,9 @@ def get_schedule():
     #Làm sạch thông tin lịch học
     cleaned_schedule = utils.parse_schedule_data(response_schedule_info.json())
     #Chuyển đổi lịch học thành tin nhắn đẹp mắt
-    formatted_message = utils.format_schedule_message(cleaned_schedule)
-    print(formatted_message)
-    
+    #formatted_message = utils.format_upcoming_schedule(cleaned_schedule)
+    #print(formatted_message)
+    # exam_info = response_exam.text
+    # print(f"Lịch thi: {exam_info}")
     return cleaned_schedule
 

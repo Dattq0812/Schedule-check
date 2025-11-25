@@ -4,7 +4,6 @@ import os
 from dotenv import load_dotenv
 
 
-
 # Tắt cảnh báo SSL (nếu có)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 1. Cấu hình thông tin mục tiêu
@@ -47,20 +46,28 @@ data = {
 session = requests.Session()
 
 def loging():
-    print(f"Đang gửi yêu cầu đăng nhập đến: {LOGIN_URL}")
+    count = 0
+    response = None
+    while count < 3:
+        print(f"Đang gửi yêu cầu đăng nhập đến: {LOGIN_URL}")
 
-    # Gửi yêu cầu đăng nhập (POST)
-    response = session.post(LOGIN_URL, json=data, headers=HEADERS, verify= False)
-    print(f"Đã gửi yêu cầu đăng nhập.")
-    print(f"Status Code: {response.status_code}")
+        # Gửi yêu cầu đăng nhập (POST)
+        response = session.post(LOGIN_URL, json=data, headers=HEADERS, verify= False)
+        print(f"Đã gửi yêu cầu đăng nhập.")
+        print(f"Status Code: {response.status_code}")
 
-    # Kiểm tra xem login thành công không (thường check status code 200 hoặc check url chuyển hướng)
-    if response.status_code != 200:
-        print("Login failed!")
-        return None
+        # Kiểm tra xem login thành công không (thường check status code 200 hoặc check url chuyển hướng)
+        if response.status_code != 200:
+            print("Login failed!")
+            count += 1
+            continue
+        break
     
-    print("Login request sent. Checking data...")
-    print(f"Response Text: {response.text}")
+    # print("Login request sent. Checking data...")
+    # print(f"Response Text: {response.text}")
+    if response is None or response.status_code != 200:
+        print("Login failed after 3 attempts.")
+        return None
     login_data = response.json()
     token = login_data.get("Token")
     if not token:

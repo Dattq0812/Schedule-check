@@ -1,5 +1,6 @@
 import re # Thư viện xử lý biểu thức chính quy để xóa thẻ HTML
-
+from datetime import datetime as dt
+from datetime import timedelta
 def clean_html(raw_html):
     """Xóa các thẻ HTML như <span>, <br> ra khỏi chuỗi"""
     if not raw_html:
@@ -36,26 +37,135 @@ def parse_schedule_data(json_data):
     return parsed_list
 
 # Hàm định dạng lịch học thành chuỗi thông báo đẹp mắt
-def format_schedule_message(schedule_list):
+def format_upcoming_schedule(schedule_list):
+    # 1. Kiểm tra danh sách rỗng
     if not schedule_list:
-        return "😴 Tuần này bạn không có lịch học nào cả. Xõa thôi!"
+        return "😴 Không tìm thấy dữ liệu lịch học."
 
-    # Sắp xếp lịch theo ngày (nếu cần)
-    # schedule_list.sort(key=lambda x: x['date'])
-
-    # Lấy thông tin tuần từ item đầu tiên
-    week_info = schedule_list[0].get('week', '')
+    # 2. Lấy ngày hiện tại
+    now = dt.now()
+    #now = dt.strptime("2025-11-29", "%Y-%m-%d")  # Dùng ngày cố định để test
+    today_date = now.date()
     
-    message = f"📅 **LỊCH HỌC TUẦN {week_info}**\n"
+    # Tính ngày giới hạn (2 ngày sau) để hiển thị trong tiêu đề
+    end_date = today_date + timedelta(days=2)
+    
+    message = f"📅 **LỊCH HỌC 2 NGÀY TỚI**\n"
+    message += f"*(Ngày {today_date + timedelta(days=1):%d/%m} Và {end_date:%d/%m})*\n"
     message += "========================\n\n"
+    
+    count = 0
+    
+    # Mẹo: Sắp xếp danh sách theo ngày tăng dần trước khi duyệt
+    # Để đảm bảo lịch Ngày mai hiện trước, Ngày kia hiện sau
+    schedule_list.sort(key=lambda x: dt.strptime(x['date'], "%d/%m/%Y"))
 
     for item in schedule_list:
-        message += f"📖 **{item['subject']}**\n"
-        message += f"⏰ {item['day']} ({item['date']}) | {item['time']}\n"
-        message += f"🏫 **Phòng:** {item['room']}\n"
-        message += f"👨‍🏫 **GV:** {item['teacher']}\n"
-        message += "------------------------\n"
-    
+        date_str = item.get('date', '')
+        try:
+            # Chuyển chuỗi ngày học thành object date
+            item_date = dt.strptime(date_str, "%d/%m/%Y").date()
+            
+            # 3. Tính khoảng cách ngày (Delta)
+            delta = (item_date - today_date).days
+            
+            # Kiểm tra: Chỉ lấy Ngày mai (1) và Ngày kia (2)
+            if 1 <= delta <= 2:
+                # Xác định nhãn ngày cho thân thiện
+                day_label = "NGÀY MAI" if delta == 1 else "NGÀY KIA"
+                
+                message += f"🔔 **{day_label} ({item['day']} - {date_str})**\n"
+                message += f"📖 Môn: **{item['subject']}**\n"
+                message += f"⏰ Thời gian: {item['time']}\n"
+                message += f"🏫 Phòng: {item['room']}\n"
+                message += "------------------------\n"
+                count += 1
+                
+        except ValueError:
+            continue
+    # 4. Xử lý trường hợp không có môn nào
+    if count == 0:
+        message += "🎉 Tuyệt vời! 2 ngày tới bạn không có lịch học nào.\n"
+        
     return message
 
+def clean_exam_data(raw_exam_list):
+    """Làm sạch dữ liệu lịch thi từ JSON thô"""
+    cleaned_list = []
+    for item in raw_exam_list:
+        cleaned_item = {
+            'CurriculumName': item.get('CurriculumName', 'Không rõ tên môn'),
+            'NgayThi': item.get('NgayThi', ''),
+            'GioThi': item.get('GioThi', ''),
+            'PhongThi': item.get('PhongThi', ''),
+            'DiaDiem': item.get('DiaDiem', ''),
+            'HinhThucThi': item.get('HinhThucThi', ''),
+            'SBD': item.get('SBD', None)  # Số báo danh có thể là None
+        }
+        cleaned_list.append(cleaned_item)
+    return cleaned_list
+def format_exam_schedule(exam_list):
+    # 1. Kiểm tra danh sách rỗng
+    if not exam_list:
+        return "🎉 Bạn chưa có lịch thi nào. Ăn ngon ngủ yên nhé!"
+
+    now = dt.now()
+    today_date = now.date()
+
+    message = "🏆 **DANH SÁCH CÁC MÔN SẮP THI**\n"
+    message += "========================\n\n"
+    
+    count = 0
+    
+    # Sắp xếp lịch thi theo ngày tăng dần để môn nào thi trước hiện lên đầu
+    # Lưu ý: Cần đảm bảo 'NgayThi' đúng định dạng dd/mm/yyyy
+    exam_list.sort(key=lambda x: dt.strptime(x['NgayThi'], "%d/%m/%Y"))
+
+    for item in exam_list:
+        date_str = item.get('NgayThi', '')
+        
+        try:
+            # Chuyển chuỗi ngày thi thành object date
+            exam_date = dt.strptime(date_str, "%d/%m/%Y").date()
+            
+            # Tính khoảng cách ngày
+            delta = (exam_date - today_date).days
+            
+            # Chỉ hiện các môn thi từ hôm nay trở đi (Không hiện môn đã thi qua rồi)
+            if delta >= 0:
+                # --- LOGIC CẢNH BÁO ---
+                icon = "📅"
+                warning = ""
+                
+                if delta == 0:
+                    icon = "🚨"
+                    warning = " (HÔM NAY THI!)"
+                elif delta == 1:
+                    icon = "⚡"
+                    warning = " (NGÀY MAI!)"
+                elif delta <= 2:
+                    icon = "⚠️"
+                    warning = " (Sắp thi!)"
+
+                # Tạo nội dung tin nhắn
+                message += f"{icon} **{item['CurriculumName']}** {warning}\n"
+                message += f"⏰ **{item['GioThi']}** - Ngày **{date_str}**\n"
+                message += f"🏫 Phòng: **{item['PhongThi']}** ({item['DiaDiem']})\n"
+                message += f"📝 Hình thức: {item['HinhThucThi']}\n"
+                
+                # Kiểm tra xem có Số báo danh chưa (vì dữ liệu mẫu của bạn SBD là None)
+                sbd = item.get('SBD')
+                if sbd:
+                    message += f"🔢 SBD: **{sbd}**\n"
+                
+                message += "------------------------\n"
+                count += 1
+                
+        except ValueError:
+            continue
+
+    if count == 0:
+        message += "🎉 Bạn đã hoàn thành tất cả các môn thi (hoặc chưa có lịch mới).\n"
+        
+    return message
 
