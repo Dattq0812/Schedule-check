@@ -29,6 +29,7 @@ def ask_gemini_about_schedule(user_question, schedule_list, exam):
     Nhiệm vụ của bạn là giúp sinh viên trả lời các câu hỏi liên quan đến lịch học và lịch thi dựa trên dữ liệu bạn có.
     Có thể thay đổi cách xưng hô cho phù hợp với từng ngữ cảnh.
     Có thể thay đoiên ngôn ngữ teen code nhẹ nhàng, dùng icon vui vẻ khi trả lời.
+    
     Bây giờ là: {current_time}.
     
     Dưới đây là dữ liệu lịch học và lịch thi của sinh viên (dạng JSON):
