@@ -169,3 +169,43 @@ def format_exam_schedule(exam_list):
         
     return message
 
+def get_notification_message(schedule_list, exam_list):
+    """
+    Kiểm tra xem có môn nào học/thi sau đúng 2 ngày nữa không.
+    Trả về nội dung thông báo hoặc None.
+    """
+    now = dt.now().date()
+    target_date = now + timedelta(days=2) # Ngày mục tiêu (Ngày kia)
+    
+    msg_list = []
+    
+    # 1. KIỂM TRA LỊCH HỌC
+    if schedule_list:
+        for item in schedule_list:
+            try:
+                # Giả sử format ngày là dd/mm/yyyy
+                item_date = dt.strptime(item.get('date', ''), "%d/%m/%Y").date()
+                if item_date == target_date:
+                    msg_list.append(f"📚 **Học:** {item['subject']} ({item['time']}) tại {item['room']}")
+            except:
+                continue
+
+    # 2. KIỂM TRA LỊCH THI (Quan trọng hơn)
+    if exam_list:
+        for item in exam_list:
+            try:
+                item_date = dt.strptime(item.get('NgayThi', ''), "%d/%m/%Y").date()
+                if item_date == target_date:
+                    msg_list.append(f"🚨 **THI:** {item['CurriculumName']} ({item['GioThi']}) tại {item['PhongThi']}")
+            except:
+                continue
+
+    # 3. TỔNG HỢP TIN NHẮN
+    if msg_list:
+        text = f"🔔 **NHẮC NHỞ LỊCH TRÌNH NGÀY {target_date.strftime('%d/%m')}**\n"
+        text += "(Còn 2 ngày nữa để chuẩn bị nha!)\n"
+        text += "--------------------------------\n"
+        text += "\n".join(msg_list)
+        return text
+    
+    return None # Không có gì thì trả về None

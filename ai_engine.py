@@ -2,6 +2,7 @@ import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 import json
+import re
 from datetime import datetime
 load_dotenv()
 
@@ -52,3 +53,61 @@ def ask_gemini_about_schedule(user_question, schedule_list, exam):
     except Exception as e:
         print(f"❌ LỖI CHI TIẾT GEMINI: {str(e)}")
         return "Ui chà, não bộ AI đang bị quá tải xíu. Hỏi lại sau nha! 😵‍💫"
+    
+
+def analyze_user_intent(user_text, schedule_data, exam_data):
+    """
+    Hàm 2 trong 1: Vừa trả lời câu hỏi, vừa phát hiện đặt lịch.
+    Output: Dictionary chứa action, time, và câu trả lời.
+    """
+    current_time = datetime.now().strftime("%H:%M ngày %d/%m/%Y")
+    
+    # Chuyển data sang string
+    schedule_str = json.dumps(schedule_data, ensure_ascii=False, default=str)
+    exam_str = json.dumps(exam_data, ensure_ascii=False, default=str)
+
+    prompt = f"""
+    Bạn là trợ lý ảo VHU. Hiện tại là: {current_time}.
+    
+    Dữ liệu lịch: {schedule_str}
+    Dữ liệu thi: {exam_str}
+    
+    User chat: "{user_text}"
+    
+    Nhiệm vụ: Phân tích ý định của user và trả về JSON duy nhất (không markdown).
+    
+    Trường hợp 1: User muốn đặt lịch nhắc nhở/báo thức/hẹn giờ hàng ngày.
+    - action: "set_reminder"
+    - time: {{"h": <giờ 24h>, "m": <phút>}} (Ví dụ "9h tối" -> h:21, m:0)
+    - response: Câu xác nhận vui vẻ (Ví dụ: "Okela, đã chốt đơn lúc 21:00 nha").
+
+    Trường hợp 2: User hỏi lịch học/thi hoặc giao tiếp bình thường.
+    - action: "chat"
+    - time: null
+    - response: Câu trả lời dựa trên dữ liệu lịch (ngắn gọn, teen code).
+
+    Trường hợp 3: User muốn hủy/tắt báo thức.
+    - action: "cancel_reminder"
+    - time: null
+    - response: Câu xác nhận hủy.
+
+    Mẫu JSON output bắt buộc:
+    {{
+        "action": "set_reminder" | "chat" | "cancel_reminder",
+        "time": {{"h": 21, "m": 30}} hoặc null,
+        "response": "Nội dung trả lời user"
+    }}
+    """
+    
+    try:
+        res = model.generate_content(prompt)
+        text = res.text.strip().replace('```json', '').replace('```', '')
+        return json.loads(text)
+    except Exception as e:
+        print(f"Lỗi AI: {e}")
+        # Fallback an toàn nếu AI lỗi
+        return {
+            "action": "chat",
+            "time": None,
+            "response": "Bot đang lú cái đầu, bạn hỏi lại câu khác đi! 😵‍💫"
+        }
