@@ -87,7 +87,7 @@ def analyze_user_intent(user_text, schedule_data, exam_data):
     - response: Câu trả lời dựa trên dữ liệu lịch (ngắn gọn, teen code).
     - Chỉ trả lời dựa trên dữ liệu lịch học/thi đã cho.
     - Nếu không có lịch thì nói rõ "2 ngày tới không có lịch học/thi nha!".
-    - Chỉ hiển thị lịch thi sắp tới nếu user hỏi về lịch thi, không hiện các ngày đã qua.
+    - Chỉ hiển thị lịch thi từ hôm nay trở đi.
 
     Trường hợp 3: User muốn hủy/tắt báo thức.
     - action: "cancel_reminder"
