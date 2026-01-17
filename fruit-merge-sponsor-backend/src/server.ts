@@ -28,8 +28,9 @@ try {
   let secretKeyBytes: Uint8Array
   
   if (SPONSOR_SECRET_KEY.startsWith('suiprivkey')) {
-    // suiprivkey format: "suiprivkey" + bech32 encoded (flag byte + 32 bytes secret + checksum)
-    // We need to decode and extract the 32-byte secret key (skip first flag byte, ignore last 4 checksum bytes)
+    // suiprivkey format uses base64 encoding after the prefix
+    // Format: "suiprivkey" + base64(flag byte + 32-byte secret key + checksum)
+    // We decode and extract the 32-byte secret key (skip first flag byte)
     const base64Part = SPONSOR_SECRET_KEY.replace('suiprivkey', '')
     const decoded = fromBase64(base64Part)
     // Extract 32 bytes starting from index 1 (skip flag byte)
@@ -77,7 +78,7 @@ app.post('/api/sponsor', async (req, res) => {
       ? new Uint8Array(transactionBytes)
       : new Uint8Array(Object.values(transactionBytes))
     
-    const tx = Transaction.fromKind(txBytesArray)
+    const tx = Transaction.from(txBytesArray)
     
     // 2. Set user as sender
     tx.setSender(userAddress)
